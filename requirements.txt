@@ -2,3 +2,4 @@ pyyaml
 aiohttp
 jsonrpcserver
 tqdm
+snetd-alpha

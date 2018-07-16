@@ -3,7 +3,7 @@ RUN apt-get update && apt-get install -y software-properties-common
 RUN add-apt-repository -y ppa:deadsnakes/ppa && \
       apt-get update && \
       apt-get upgrade -y && \
-      apt-get install -y python3.6 python3.6-dev build-essential cmake libgtk2.0-dev && \
+      apt-get install -y python3.6 python3.6-dev build-essential cmake libgtk2.0-dev python3.6-tk && \
       curl https://bootstrap.pypa.io/get-pip.py | python3.6
 
 ADD mask_rcnn/requirements.txt /mask_rcnn_requirements.txt
@@ -11,6 +11,8 @@ RUN pip3.6 install -r mask_rcnn_requirements.txt
 
 ADD requirements.txt /service_requirements.txt
 RUN pip3.6 install -r service_requirements.txt
+RUN apt-get install -y git && git clone https://github.com/waleedka/coco.git
+RUN cd coco/PythonAPI && python3.6 setup.py build_ext install
 
 ADD . /semantic-segmentation
 WORKDIR /semantic-segmentation

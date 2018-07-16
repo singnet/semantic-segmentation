@@ -36,24 +36,17 @@ class_names = ['BG', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
                'keyboard', 'cell phone', 'microwave', 'oven', 'toaster',
                'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors',
                'teddy bear', 'hair drier', 'toothbrush']
-model = None
 
 
-def init():
-    ROOT_DIR = os.path.join(os.path.dirname(__file__), "..")
+ROOT_DIR = os.path.join(os.path.dirname(__file__), "..")
+config = None
+
+
+def init_and_config():
     sys.path.append(os.path.join(ROOT_DIR, "mask_rcnn"))  # To find local version of the library
-
     # Import COCO config
     sys.path.append(os.path.join(ROOT_DIR, "mask_rcnn/samples/coco/"))  # To find local version
-    from mrcnn import utils
-
-    import mrcnn.model as modellib
     import coco
-
-    # Directory to save logs and trained model
-    MODEL_DIR = os.path.join(ROOT_DIR, "logs")
-    # Local path to trained weights file
-    COCO_MODEL_PATH = os.path.join(ROOT_DIR, "models", "mask_rcnn_coco.h5")
 
     class InferenceConfig(coco.CocoConfig):
         # Set batch size to 1 since we'll be running inference on
@@ -61,16 +54,27 @@ def init():
         GPU_COUNT = 1
         IMAGES_PER_GPU = 1
 
+    global config
     config = InferenceConfig()
     config.display()
 
-    global model
+
+def load_model():
+    if config is None:
+        log.error("Config is None, model can't be initialised")
+        return None
+    import mrcnn.model as modellib
+    # Directory to save logs and trained model
+    MODEL_DIR = os.path.join(ROOT_DIR, "logs")
+    # Local path to trained weights file
+    COCO_MODEL_PATH = os.path.join(ROOT_DIR, "models", "mask_rcnn_coco.h5")
     # Create model object in inference mode.
     model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
 
     # Load weights trained on MS-COCO
     model.load_weights(COCO_MODEL_PATH, by_name=True)
-    print("Mask_RCNN weights loaded and model initialised")
+    log.info("Mask_RCNN weights loaded and model initialised")
+    return model
 
 
 def fig2png_buffer(fig):
@@ -84,12 +88,13 @@ def fig2png_buffer(fig):
 
 
 def segment_image(img, visualize=False):
-    from mrcnn import visualize
+    model = load_model()
 
     # Run detection
     results = model.detect([img], verbose=1)
     r = results[0]
     if visualize:
+        from mrcnn import visualize
         # Visualize results
         fig, ax = plt.subplots(1, figsize=plt.figaspect(img))
         ax.set_axis_off()
@@ -154,5 +159,5 @@ async def handle(request):
 if __name__ == '__main__':
     parser = services.common.common_parser(__file__)
     args = parser.parse_args(sys.argv[1:])
-    init()
+    init_and_config()
     services.common.main_loop(None, None, handle, args)
