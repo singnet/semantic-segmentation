@@ -39,13 +39,18 @@ class_names = ['BG', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
 
 
 ROOT_DIR = os.path.join(os.path.dirname(__file__), "..")
-config = None
 
 
-def init_and_config():
+def init():
     sys.path.append(os.path.join(ROOT_DIR, "mask_rcnn"))  # To find local version of the library
     # Import COCO config
     sys.path.append(os.path.join(ROOT_DIR, "mask_rcnn/samples/coco/"))  # To find local version
+
+    #config.display()
+
+
+def load_model():
+    import mrcnn.model as modellib
     import coco
 
     class InferenceConfig(coco.CocoConfig):
@@ -54,16 +59,8 @@ def init_and_config():
         GPU_COUNT = 1
         IMAGES_PER_GPU = 1
 
-    global config
     config = InferenceConfig()
-    config.display()
 
-
-def load_model():
-    if config is None:
-        log.error("Config is None, model can't be initialised")
-        return None
-    import mrcnn.model as modellib
     # Directory to save logs and trained model
     MODEL_DIR = os.path.join(ROOT_DIR, "logs")
     # Local path to trained weights file
@@ -88,6 +85,13 @@ def fig2png_buffer(fig):
 
 
 def segment_image(img, visualize=False):
+    import tensorflow as tf
+    from keras import backend as K
+    tf_config = tf.ConfigProto()
+    tf_config.gpu_options.allow_growth = True
+    sess = tf.Session(config=tf_config)
+    K.set_session(sess)
+
     model = load_model()
 
     # Run detection
@@ -118,6 +122,9 @@ def segment_image(img, visualize=False):
         b64img = base64.b64encode(buff.getvalue()).decode('ascii')
         r['masks'].append(b64img)
 
+    del model
+    sess.close()
+    #tf.reset_default_graph()
     return r
 
 
@@ -142,7 +149,11 @@ async def semantic_segmentation(**kwargs):
         img = img[:, :, :3]
         log.debug("Dropping alpha channel from image")
 
-    result = segment_image(img)
+    from multiprocessing import Pool
+    global config
+    with Pool(1) as p:
+        result = p.apply(segment_image, (img,))
+#    result = segment_image(img)
 
     return {'segmentation': result}
 
@@ -159,5 +170,5 @@ async def handle(request):
 if __name__ == '__main__':
     parser = services.common.common_parser(__file__)
     args = parser.parse_args(sys.argv[1:])
-    init_and_config()
+    init()
     services.common.main_loop(None, None, handle, args)
