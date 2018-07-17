@@ -112,6 +112,10 @@ def segment_image(img, visualize=False):
 
     r['rois'] = r['rois'].tolist()
     r['class_ids'] = r['class_ids'].tolist()
+    r['class_names'] = [class_names[i] for i in r['class_ids']]
+    # TODO - when there is a supported technique for providing metadata or free API calls, move this list
+    # of known classes there.
+    r['known_classes'] = class_names
     r['scores'] = r['scores'].tolist()
     masks = r['masks']
     r['masks'] = []
