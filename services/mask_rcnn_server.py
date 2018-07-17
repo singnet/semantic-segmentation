@@ -36,24 +36,22 @@ class_names = ['BG', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
                'keyboard', 'cell phone', 'microwave', 'oven', 'toaster',
                'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors',
                'teddy bear', 'hair drier', 'toothbrush']
-model = None
+
+
+ROOT_DIR = os.path.join(os.path.dirname(__file__), "..")
 
 
 def init():
-    ROOT_DIR = os.path.join(os.path.dirname(__file__), "..")
     sys.path.append(os.path.join(ROOT_DIR, "mask_rcnn"))  # To find local version of the library
-
     # Import COCO config
     sys.path.append(os.path.join(ROOT_DIR, "mask_rcnn/samples/coco/"))  # To find local version
-    from mrcnn import utils
 
+    #config.display()
+
+
+def load_model():
     import mrcnn.model as modellib
     import coco
-
-    # Directory to save logs and trained model
-    MODEL_DIR = os.path.join(ROOT_DIR, "logs")
-    # Local path to trained weights file
-    COCO_MODEL_PATH = os.path.join(ROOT_DIR, "models", "mask_rcnn_coco.h5")
 
     class InferenceConfig(coco.CocoConfig):
         # Set batch size to 1 since we'll be running inference on
@@ -62,15 +60,18 @@ def init():
         IMAGES_PER_GPU = 1
 
     config = InferenceConfig()
-    config.display()
 
-    global model
+    # Directory to save logs and trained model
+    MODEL_DIR = os.path.join(ROOT_DIR, "logs")
+    # Local path to trained weights file
+    COCO_MODEL_PATH = os.path.join(ROOT_DIR, "models", "mask_rcnn_coco.h5")
     # Create model object in inference mode.
     model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
 
     # Load weights trained on MS-COCO
     model.load_weights(COCO_MODEL_PATH, by_name=True)
-    print("Mask_RCNN weights loaded and model initialised")
+    log.info("Mask_RCNN weights loaded and model initialised")
+    return model
 
 
 def fig2png_buffer(fig):
@@ -84,12 +85,20 @@ def fig2png_buffer(fig):
 
 
 def segment_image(img, visualize=False):
-    from mrcnn import visualize
+    import tensorflow as tf
+    from keras import backend as K
+    tf_config = tf.ConfigProto()
+    tf_config.gpu_options.allow_growth = True
+    sess = tf.Session(config=tf_config)
+    K.set_session(sess)
+
+    model = load_model()
 
     # Run detection
     results = model.detect([img], verbose=1)
     r = results[0]
     if visualize:
+        from mrcnn import visualize
         # Visualize results
         fig, ax = plt.subplots(1, figsize=plt.figaspect(img))
         ax.set_axis_off()
@@ -103,6 +112,10 @@ def segment_image(img, visualize=False):
 
     r['rois'] = r['rois'].tolist()
     r['class_ids'] = r['class_ids'].tolist()
+    r['class_names'] = [class_names[i] for i in r['class_ids']]
+    # TODO - when there is a supported technique for providing metadata or free API calls, move this list
+    # of known classes there.
+    r['known_classes'] = class_names
     r['scores'] = r['scores'].tolist()
     masks = r['masks']
     r['masks'] = []
@@ -113,6 +126,9 @@ def segment_image(img, visualize=False):
         b64img = base64.b64encode(buff.getvalue()).decode('ascii')
         r['masks'].append(b64img)
 
+    del model
+    sess.close()
+    #tf.reset_default_graph()
     return r
 
 
@@ -137,7 +153,11 @@ async def semantic_segmentation(**kwargs):
         img = img[:, :, :3]
         log.debug("Dropping alpha channel from image")
 
-    result = segment_image(img)
+    from multiprocessing import Pool
+    global config
+    with Pool(1) as p:
+        result = p.apply(segment_image, (img,))
+#    result = segment_image(img)
 
     return {'segmentation': result}
 
