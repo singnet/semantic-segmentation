@@ -3,3 +3,4 @@ aiohttp
 jsonrpcserver
 tqdm
 snetd-alpha
+tensorflow-gpu
