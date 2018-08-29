@@ -32,7 +32,7 @@ def main():
     endpoint = args.endpoint
     params = {"image": img_base64}
     if args.snet:
-        endpoint, job_address, job_signature = snet_setup(service_name="semantic_segmentation")
+        endpoint, job_address, job_signature = snet_setup(service_name="semantic_segmentation", max_price=100000000)
         params['job_address'] = job_address
         params['job_signature'] = job_signature
 
