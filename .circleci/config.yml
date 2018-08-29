@@ -62,7 +62,7 @@ jobs:
   build_semantic_segmentation:
     working_directory: /semantic-segmentation
     docker:
-      - image: docker:18.09-rc-git
+      - image: docker:18.06.1-ce-git
     environment:
       SERVICE_NAME: semantic-segmentation
       ORG: singnet
