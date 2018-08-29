@@ -72,4 +72,7 @@ workflows:
   build_containers:
     jobs:
       - build_semantic_segmentation
+    filters:
+      branches:
+        only: master
   
