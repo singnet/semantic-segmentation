@@ -71,8 +71,8 @@ workflows:
   version: 2
   build_containers:
     jobs:
-      - build_semantic_segmentation
-    filters:
-      branches:
-        only: master
+      - build_semantic_segmentation:
+          filters:
+            branches:
+              only: master
   
