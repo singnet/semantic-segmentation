@@ -49,6 +49,7 @@ defaults: &default_steps
     - deploy:
         name: Push Docker image
         command: |
+          echo $CIRCLE_BRANCH
           if [ "$CIRCLE_BRANCH" == "master" ]; then
             docker login -u $DOCKER_HUB_USER_ID -p $DOCKER_HUB_PWD
             docker tag $SERVICE_NAME $DOCKER_ORG/$SERVICE_NAME:$CIRCLE_SHA1
