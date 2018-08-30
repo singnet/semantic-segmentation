@@ -71,6 +71,10 @@ jobs:
   deploy:
     machine:
       enabled: true
+    environment:
+      SERVICE_NAME: semantic-segmentation
+      ORG: singnet
+      DOCKER_ORG: singularitynet
     steps:
       - run:
           name: Deploy Over SSH
