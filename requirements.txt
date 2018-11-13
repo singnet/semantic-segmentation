@@ -1,6 +1,4 @@
 pyyaml
-aiohttp
-jsonrpcserver
 tqdm
-snetd-alpha
 tensorflow-gpu
+scikit-image

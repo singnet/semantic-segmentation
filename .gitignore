@@ -106,3 +106,9 @@ venv.bak/
 .idea/
 models/
 snet.config
+config/
+mask_*.png
+.vscode/
+
+services/service_spec/segmentation_pb2.py
+services/service_spec/segmentation_pb2_grpc.py

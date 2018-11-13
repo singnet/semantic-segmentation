@@ -11,10 +11,9 @@ RUN pip3.6 install -r mask_rcnn_requirements.txt
 
 ADD requirements.txt /service_requirements.txt
 RUN pip3.6 install -r service_requirements.txt
-RUN apt-get install -y git && git clone https://github.com/waleedka/coco.git
-RUN cd coco/PythonAPI && python3.6 setup.py build_ext install
 
 ADD . /semantic-segmentation
 WORKDIR /semantic-segmentation
+RUN ./build_proto.sh
 
 CMD ["python3.6", "run_service.py"]

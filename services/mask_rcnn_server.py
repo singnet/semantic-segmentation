@@ -3,176 +3,115 @@ import logging
 import base64
 import io
 import os
+import grpc
+import asyncio
+import argparse
+import os.path
+import time
+import warnings
+import concurrent.futures
+from multiprocessing import Pool
 
 import skimage.io
 from skimage import img_as_uint
 import matplotlib.pyplot as plt
 import PIL, PIL.Image
 
-from aiohttp import web
-from jsonrpcserver.aio import methods
-from jsonrpcserver.exceptions import InvalidParams
+from services import registry
+import services.service_spec.segmentation_pb2 as ss_pb
+import services.service_spec.segmentation_pb2_grpc as ss_grpc 
 
-import services.common
-
-
+logging.basicConfig(level=10, format="%(asctime)s - [%(levelname)8s] - %(name)s - %(message)s")
 log = logging.getLogger(__package__ + "." + __name__)
 
+class SegmentationServicer(ss_grpc.SemanticSegmentationServicer):
+    def __init__(self, q):
+        self.q = q
+        pass
 
-# COCO Class names
-# Index of the class in the list is its ID.
-class_names = ['BG', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
-               'bus', 'train', 'truck', 'boat', 'traffic light',
-               'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird',
-               'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear',
-               'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie',
-               'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
-               'kite', 'baseball bat', 'baseball glove', 'skateboard',
-               'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup',
-               'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
-               'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza',
-               'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed',
-               'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote',
-               'keyboard', 'cell phone', 'microwave', 'oven', 'toaster',
-               'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors',
-               'teddy bear', 'hair drier', 'toothbrush']
+    def segment(self, request, context):
+        result = ss_pb.Result()
 
+        ## Marshal input
+        image = request.img.content
+        mimetype = request.img.mimetype
 
-ROOT_DIR = os.path.join(os.path.dirname(__file__), "..")
+        binary_image = base64.b64decode(image)
+        img_data = io.BytesIO(binary_image)
+        img = skimage.io.imread(img_data)
 
+        # Drop alpha channel if it exists
+        if img.shape[-1] == 4:
+            img = img[:, :, :3]
+            log.debug("Dropping alpha channel from image")
 
-def init():
-    sys.path.append(os.path.join(ROOT_DIR, "mask_rcnn"))  # To find local version of the library
-    # Import COCO config
-    sys.path.append(os.path.join(ROOT_DIR, "mask_rcnn/samples/coco/"))  # To find local version
+        self.q.send((img,))
+        result = self.q.recv()
+        if isinstance(result, Exception):
+            raise result
 
-    #config.display()
+        ## Marshal output
+        pb_result = ss_pb.Result(
+            segmentation_img=[ss_pb.Image(content=i) for i in result["masks"]],
+            debug_img=ss_pb.Image(content=result["resultImage"]),
+            class_ids=[class_id for class_id in result["class_ids"]],
+            class_names=[n for n in result["class_names"]],
+            scores=[n for n in result["scores"]]
+            #known_classes=[n for n in result["known_classes"]],
+        )
 
-
-def load_model():
-    import mrcnn.model as modellib
-    import coco
-
-    class InferenceConfig(coco.CocoConfig):
-        # Set batch size to 1 since we'll be running inference on
-        # one image at a time. Batch size = GPU_COUNT * IMAGES_PER_GPU
-        GPU_COUNT = 1
-        IMAGES_PER_GPU = 1
-
-    config = InferenceConfig()
-
-    # Directory to save logs and trained model
-    MODEL_DIR = os.path.join(ROOT_DIR, "logs")
-    # Local path to trained weights file
-    COCO_MODEL_PATH = os.path.join(ROOT_DIR, "models", "mask_rcnn_coco.h5")
-    # Create model object in inference mode.
-    model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
-
-    # Load weights trained on MS-COCO
-    model.load_weights(COCO_MODEL_PATH, by_name=True)
-    log.info("Mask_RCNN weights loaded and model initialised")
-    return model
+        return pb_result
 
 
-def fig2png_buffer(fig):
-    fig.canvas.draw()
-
-    buffer = io.BytesIO()
-
-    pilImage = PIL.Image.frombytes("RGB", fig.canvas.get_width_height(), fig.canvas.tostring_rgb())
-    pilImage.save(buffer, "PNG")
-    return buffer
+def serve(dispatch_queue, max_workers=1, port=7777):
+    assert max_workers == 1, "No support for more than one worker"
+    server = grpc.server(concurrent.futures.ThreadPoolExecutor(max_workers=max_workers))
+    ss_grpc.add_SemanticSegmentationServicer_to_server(SegmentationServicer(dispatch_queue), server)
+    server.add_insecure_port("[::]:{}".format(port))
+    return server
 
 
-def segment_image(img, visualize=False):
-    import tensorflow as tf
-    from keras import backend as K
-    tf_config = tf.ConfigProto()
-    tf_config.gpu_options.allow_growth = True
-    sess = tf.Session(config=tf_config)
-    K.set_session(sess)
+def main_loop(dispatch_queue, grpc_serve_function, grpc_port, grpc_args={}):
+    server = None
+    if grpc_serve_function is not None:
+        server = grpc_serve_function(dispatch_queue, port=grpc_port, **grpc_args)
+        server.start()
 
-    model = load_model()
+    try:
+        while True:
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        server.stop(0)
 
-    # Run detection
-    results = model.detect([img], verbose=1)
-    r = results[0]
-    if visualize:
-        from mrcnn import visualize
-        # Visualize results
-        fig, ax = plt.subplots(1, figsize=plt.figaspect(img))
-        ax.set_axis_off()
-        fig.subplots_adjust(0, 0, 1, 1)
-
-        visualize.display_instances(img, r['rois'], r['masks'], r['class_ids'],
-                                    class_names, r['scores'], ax=ax)
-        viz_img_buff = fig2png_buffer(fig)
-
-        r["resultImage"] = base64.b64encode(viz_img_buff.getvalue()).decode('ascii')
-
-    r['rois'] = r['rois'].tolist()
-    r['class_ids'] = r['class_ids'].tolist()
-    r['class_names'] = [class_names[i] for i in r['class_ids']]
-    # TODO - when there is a supported technique for providing metadata or free API calls, move this list
-    # of known classes there.
-    r['known_classes'] = class_names
-    r['scores'] = r['scores'].tolist()
-    masks = r['masks']
-    r['masks'] = []
-    for i in range(masks.shape[2]):
-        # convert mask arrays into gray-scale pngs, then base64 encode them
-        buff = io.BytesIO()
-        skimage.io.imsave(buff, img_as_uint(masks[:, :, i]))
-        b64img = base64.b64encode(buff.getvalue()).decode('ascii')
-        r['masks'].append(b64img)
-
-    del model
-    sess.close()
-    #tf.reset_default_graph()
-    return r
+def worker(q):
+    import services.common
+    while True:
+        try:
+            item = q.recv()
+            with Pool(1) as p:
+                result = p.apply(services.common.segment_image, (item[0], True))
+            q.send(result)
+        except Exception as e:
+            q.send(e)
 
 
-@methods.add
-async def ping():
-    return 'pong'
-
-
-@methods.add
-async def semantic_segmentation(**kwargs):
-    image = kwargs.get("image", None)
-
-    if image is None:
-        raise InvalidParams("image is required")
-
-    binary_image = base64.b64decode(image)
-    img_data = io.BytesIO(binary_image)
-    img = skimage.io.imread(img_data)
-
-    # Drop alpha channel if it exists
-    if img.shape[-1] == 4:
-        img = img[:, :, :3]
-        log.debug("Dropping alpha channel from image")
-
-    from multiprocessing import Pool
-    global config
-    with Pool(1) as p:
-        result = p.apply(segment_image, (img,))
-#    result = segment_image(img)
-
-    return {'segmentation': result}
-
-
-async def handle(request):
-    request = await request.text()
-    response = await methods.dispatch(request, trim_log_values=True)
-    if response.is_notification:
-        return web.Response()
-    else:
-        return web.json_response(response, status=response.http_status)
-
-
-if __name__ == '__main__':
-    parser = services.common.common_parser(__file__)
+if __name__ == "__main__":
+    script_name = __file__
+    parser = argparse.ArgumentParser(prog=script_name)
+    server_name = os.path.splitext(os.path.basename(script_name))[0]
+    parser.add_argument("--grpc-port", help="port to bind grpc services to", default=registry[server_name]['grpc'], type=int, required=False)
     args = parser.parse_args(sys.argv[1:])
-    init()
-    services.common.main_loop(None, None, handle, args)
+
+    # Need queue system and spawning grpc server in separate process because of:
+    # https://github.com/grpc/grpc/issues/16001
+
+    import multiprocessing as mp
+    pipe = mp.Pipe()
+    p = mp.Process(target=main_loop, args=(pipe[0], serve, args.grpc_port))
+    p.start()
+
+    w = mp.Process(target=worker, args=(pipe[1],))
+    w.start()
+
+    p.join()
+    w.join()
