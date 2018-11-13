@@ -1,0 +1,12 @@
+{
+    "name": "semantic-segmentation",
+    "service_spec": "service_spec/",
+    "organization": "SNET",
+    "path": "",
+    "price": 10000000,
+    "endpoint": "http://34.216.72.29:6206",
+    "tags": [],
+    "metadata": {
+        "description": ""
+    }
+}
