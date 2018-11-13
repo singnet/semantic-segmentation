@@ -14,6 +14,6 @@ RUN pip3.6 install -r service_requirements.txt
 
 ADD . /semantic-segmentation
 WORKDIR /semantic-segmentation
-RUN ./build_proto.sh
+RUN ./buildproto.sh
 
 CMD ["python3.6", "run_service.py"]
