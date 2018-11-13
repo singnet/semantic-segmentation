@@ -2,3 +2,5 @@ pyyaml
 tqdm
 tensorflow-gpu
 scikit-image
+grpcio==1.16.0
+grpcio-tools==1.14.1
