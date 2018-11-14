@@ -30,8 +30,6 @@ class SegmentationServicer(ss_grpc.SemanticSegmentationServicer):
         pass
 
     def segment(self, request, context):
-        result = ss_pb.Result()
-
         ## Marshal input
         image = request.img.content
         mimetype = request.img.mimetype

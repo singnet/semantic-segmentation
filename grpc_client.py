@@ -28,7 +28,7 @@ def main():
     parser = argparse.ArgumentParser(prog=script_name)
 
     default_endpoint = "127.0.0.1:{}".format(registry[SERVER_NAME]['grpc'])
-    parser.add_argument("--endpoint", help="jsonrpc server to connect to", default=default_endpoint,
+    parser.add_argument("--endpoint", help="grpc server to connect to", default=default_endpoint,
                         type=str, required=False)
     parser.add_argument("--snet", help="call services on SingularityNet - requires configured snet CLI",
                         action='store_true')
@@ -49,13 +49,13 @@ def main():
     img = grpc_bt_pb2.Image(content=img_base64)
     request = grpc_bt_pb2.Request(img=img, visualise=True)
 
+    metadata=[]
     if args.snet:
-        params = {}
         endpoint, job_address, job_signature = snet_setup(service_name="semantic_segmentation", max_price=100000000)
-        params['job_address'] = job_address
-        params['job_signature'] = job_signature
+        metadata = [("snet-job-address", job_address), ("snet-job-signature", job_signature)]
 
-    response = stub.segment(request)
+    response = stub.segment(request, metadata=metadata)
+
     print("Classes detected:", response.class_names)
 
     if args.save_debug:
