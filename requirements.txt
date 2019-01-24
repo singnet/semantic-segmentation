@@ -1,6 +1,17 @@
 pyyaml
 tqdm
-tensorflow-gpu
-scikit-image
 grpcio==1.16.0
 grpcio-tools==1.14.1
+# mask_rcnn
+numpy
+scipy
+Pillow
+cython
+matplotlib
+scikit-image
+tensorflow-gpu>=1.3.0
+keras>=2.0.8
+opencv-python
+h5py
+imgaug
+IPython[all]
