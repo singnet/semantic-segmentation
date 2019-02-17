@@ -34,8 +34,7 @@ class SegmentationServicer(ss_grpc.SemanticSegmentationServicer):
         image = request.img.content
         mimetype = request.img.mimetype
 
-        binary_image = base64.b64decode(image)
-        img_data = io.BytesIO(binary_image)
+        img_data = io.BytesIO(image)
         img = skimage.io.imread(img_data)
 
         # Drop alpha channel if it exists

@@ -44,9 +44,9 @@ def main():
     stub = grpc_bt_grpc.SemanticSegmentationStub(channel)
 
     with open(args.image, "rb") as f:
-        img_base64 = base64.b64encode(f.read()) # .decode('ascii')
+        img_data = f.read()
 
-    img = grpc_bt_pb2.Image(content=img_base64)
+    img = grpc_bt_pb2.Image(content=img_data)
     request = grpc_bt_pb2.Request(img=img, visualise=True)
 
     metadata=[]
