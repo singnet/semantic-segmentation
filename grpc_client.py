@@ -17,8 +17,8 @@ SERVER_NAME = 'mask_rcnn_server'
 
 
 def save_img(fn, pb_img):
-    binary_image = base64.b64decode(pb_img.content)
-    img_data = io.BytesIO(binary_image)
+    #binary_image = base64.b64decode(pb_img.content)
+    img_data = io.BytesIO(pb_img.content)
     img = skimage.io.imread(img_data)
     skimage.io.imsave(fn, img)
 

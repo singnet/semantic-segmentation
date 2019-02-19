@@ -127,7 +127,7 @@ def segment_image(img, visualize=False):
                                     class_names, r['scores'], ax=ax)
         viz_img_buff = fig2png_buffer(fig)
 
-        r["resultImage"] = base64.b64encode(viz_img_buff.getvalue())
+        r["resultImage"] = viz_img_buff.getvalue()
 
     r['rois'] = r['rois'].tolist()
     r['class_ids'] = r['class_ids'].tolist()
@@ -144,8 +144,7 @@ def segment_image(img, visualize=False):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             skimage.io.imsave(buff, img_as_uint(masks[:, :, i]))
-        b64img = base64.b64encode(buff.getvalue())
-        r['masks'].append(b64img)
+        r['masks'].append(buff.getvalue())
     
     del model
     sess.close()
