@@ -107,7 +107,7 @@ jobs:
               docker login -u $DOCKER_HUB_USER_ID -p $DOCKER_HUB_PWD;
               docker pull $DOCKER_ORG/$SERVICE_NAME:$CIRCLE_SHA1
               docker stop $CONTAINER_NAME && docker rm $CONTAINER_NAME
-              docker run --runtime=nvidia --name $CONTAINER_NAME --restart unless-stopped -v /etc/letsencrypt:/etc/letsencrypt -v $ETCD_VOLUME:$ETCD_CONTAINER_FOLDER -p $SNETD_PORT:$SNETD_PORT -di $DOCKER_ORG/$SERVICE_NAME:$CIRCLE_SHA1 python3.6 run_services.py --daemon-config-path $SNETD_CONFIG
+              docker run --runtime=nvidia --name $CONTAINER_NAME --restart unless-stopped -v /etc/letsencrypt:/etc/letsencrypt -v $ETCD_VOLUME:$ETCD_CONTAINER_FOLDER -p $SNETD_PORT:$SNETD_PORT -di $DOCKER_ORG/$SERVICE_NAME:$CIRCLE_SHA1 python3.6 run_service.py --daemon-config-path $SNETD_CONFIG
             EOF
   deploy-mainnet:
     machine:
@@ -128,7 +128,7 @@ jobs:
               docker login -u $DOCKER_HUB_USER_ID -p $DOCKER_HUB_PWD;
               docker pull $DOCKER_ORG/$SERVICE_NAME:$CIRCLE_SHA1
               docker stop $CONTAINER_NAME && docker rm $CONTAINER_NAME
-              docker run --runtime=nvidia --name $CONTAINER_NAME --restart unless-stopped -v /etc/letsencrypt:/etc/letsencrypt -v $ETCD_VOLUME:$ETCD_CONTAINER_FOLDER -p $SNETD_PORT:$SNETD_PORT -di $DOCKER_ORG/$SERVICE_NAME:$CIRCLE_SHA1 python3.6 run_services.py --daemon-config-path $SNETD_CONFIG
+              docker run --runtime=nvidia --name $CONTAINER_NAME --restart unless-stopped -v /etc/letsencrypt:/etc/letsencrypt -v $ETCD_VOLUME:$ETCD_CONTAINER_FOLDER -p $SNETD_PORT:$SNETD_PORT -di $DOCKER_ORG/$SERVICE_NAME:$CIRCLE_SHA1 python3.6 run_service.py --daemon-config-path $SNETD_CONFIG
             EOF
 workflows:
   version: 2
