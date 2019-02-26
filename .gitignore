@@ -105,8 +105,6 @@ venv.bak/
 
 .idea/
 models/
-snet.config
-config/
 mask_*.png
 .vscode/
 

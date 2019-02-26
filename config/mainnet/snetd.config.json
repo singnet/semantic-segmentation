@@ -1,0 +1,20 @@
+{
+   "DAEMON_END_POINT": "0.0.0.0:6406",
+   "ETHEREUM_JSON_RPC_ENDPOINT": "https://mainnet.infura.io",
+   "IPFS_END_POINT": "http://ipfs.singularitynet.io:80",
+   "REGISTRY_ADDRESS_KEY": "0xb3180a92e210b45e3447976a412ac0df859febaf",
+   "PASSTHROUGH_ENABLED": true,
+   "PASSTHROUGH_ENDPOINT": "http://127.0.0.1:6006",
+   "ORGANIZATION_ID": "snet",
+   "SERVICE_ID": "semantic-segmentation",
+
+   "ssl_cert": "/etc/letsencrypt/live/services-1.snet.sh/fullchain.pem",
+   "ssl_key": "/etc/letsencrypt/live/services-1.snet.sh/privkey.pem",
+
+   "LOG": {
+       "LEVEL": "debug",
+       "OUTPUT": {
+            "TYPE": "stdout"
+           }
+   }
+}

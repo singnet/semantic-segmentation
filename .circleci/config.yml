@@ -88,6 +88,48 @@ jobs:
               docker stop $SERVICE_NAME && docker rm $SERVICE_NAME
               docker run --runtime=nvidia --name $SERVICE_NAME --restart unless-stopped -p $SNETD_PORT:$SNETD_PORT -v $ETCD_VOLUME:$ETCD_CONTAINER_FOLDER -di $DOCKER_ORG/$SERVICE_NAME:$CIRCLE_SHA1 python3.6 run_service.py --daemon-config-path $SNETD_CONFIG
             EOF
+  deploy-ropsten:
+    machine:
+      enabled: true
+    environment:
+      SERVICE_NAME: semantic-segmentation
+      CONTAINER_NAME: semantic-segmentation-ropsten
+      DOCKER_ORG: singularitynet
+      SNETD_PORT: 6306
+      SNETD_CONFIG: "config/ropsten/snetd.config.json"
+      ETCD_VOLUME: semantic-segmentation-ropsten-etcd
+      ETCD_CONTAINER_FOLDER: /semantic-segmentation/etcd/
+    steps:
+      - run:
+          name: Deploy Over SSH
+          command: |
+            ssh $SSH_USER@$SSH_HOST << EOF
+              docker login -u $DOCKER_HUB_USER_ID -p $DOCKER_HUB_PWD;
+              docker pull $DOCKER_ORG/$SERVICE_NAME:$CIRCLE_SHA1
+              docker stop $CONTAINER_NAME && docker rm $CONTAINER_NAME
+              docker run --runtime=nvidia --name $CONTAINER_NAME --restart unless-stopped -v /etc/letsencrypt:/etc/letsencrypt -v $ETCD_VOLUME:$ETCD_CONTAINER_FOLDER -p $SNETD_PORT:$SNETD_PORT -di $DOCKER_ORG/$SERVICE_NAME:$CIRCLE_SHA1 python3.6 run_services.py --daemon-config-path $SNETD_CONFIG
+            EOF
+  deploy-mainnet:
+    machine:
+      enabled: true
+    environment:
+      SERVICE_NAME: semantic-segmentation
+      CONTAINER_NAME: semantic-segmentation-mainnet
+      DOCKER_ORG: singularitynet
+      SNETD_PORT: 6406
+      SNETD_CONFIG: "config/mainnet/snetd.config.json"
+      ETCD_VOLUME: semantic-segmentation-mainnet-etcd
+      ETCD_CONTAINER_FOLDER: /semantic-segmentation/etcd/
+    steps:
+      - run:
+          name: Deploy Over SSH
+          command: |
+            ssh $SSH_USER@$SSH_HOST << EOF
+              docker login -u $DOCKER_HUB_USER_ID -p $DOCKER_HUB_PWD;
+              docker pull $DOCKER_ORG/$SERVICE_NAME:$CIRCLE_SHA1
+              docker stop $CONTAINER_NAME && docker rm $CONTAINER_NAME
+              docker run --runtime=nvidia --name $CONTAINER_NAME --restart unless-stopped -v /etc/letsencrypt:/etc/letsencrypt -v $ETCD_VOLUME:$ETCD_CONTAINER_FOLDER -p $SNETD_PORT:$SNETD_PORT -di $DOCKER_ORG/$SERVICE_NAME:$CIRCLE_SHA1 python3.6 run_services.py --daemon-config-path $SNETD_CONFIG
+            EOF
 workflows:
   version: 2
   build-and-maybe-deploy:
@@ -99,4 +141,17 @@ workflows:
           filters:
             branches:
               only: master
+      - deploy-ropsten:
+          requires:
+            - build-container
+          filters:
+            branches:
+              only: master
+      # - deploy-mainnet:
+      #    requires:
+      #      - build-container
+      #     filters:
+      #       branches:
+      #         only: master
+  
   
