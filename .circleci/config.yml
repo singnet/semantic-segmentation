@@ -75,7 +75,7 @@ jobs:
       SERVICE_NAME: semantic-segmentation
       DOCKER_ORG: singularitynet
       SNETD_PORT: 6206
-      SNETD_CONFIG: snetd.config.json
+      SNETD_CONFIG: "config/kovan/snetd.config.json"
       ETCD_VOLUME: semantic-segmentation-etcd
       ETCD_CONTAINER_FOLDER: /semantic-segmentation/storage-data-dir-1.etcd/
     steps:
