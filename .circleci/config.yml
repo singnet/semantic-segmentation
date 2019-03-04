@@ -147,11 +147,11 @@ workflows:
           filters:
             branches:
               only: master
-      # - deploy-mainnet:
-      #    requires:
-      #      - build-container
-      #     filters:
-      #       branches:
-      #         only: master
+      - deploy-mainnet:
+         requires:
+           - build-container
+          filters:
+            branches:
+              only: master
   
   
