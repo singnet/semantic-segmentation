@@ -148,7 +148,7 @@ workflows:
             branches:
               only: master
       - deploy-mainnet:
-         requires:
+          requires:
            - build-container
           filters:
             branches:
