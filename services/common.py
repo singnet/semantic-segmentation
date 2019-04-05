@@ -93,7 +93,9 @@ def fig2png_buffer(fig):
     buffer = io.BytesIO()
 
     pilImage = PIL.Image.frombytes("RGB", fig.canvas.get_width_height(), fig.canvas.tostring_rgb())
+    print("Read canvas to pil image")
     pilImage.save(buffer, "PNG")
+    
     return buffer
 
 
@@ -113,10 +115,12 @@ def segment_image(img, visualize=False):
     results = model.detect([img], verbose=1)
     r = results[0]
 
+    print("Model inference completed")
+
     # We need to copy/serialise some of this data otherwise
     # it will be lost when this spawned process finishes
     if visualize:
-        log.info("visualize requested")
+        print("Visualisation requested")
         from mrcnn import visualize
         # Visualize results
         fig, ax = plt.subplots(1, figsize=plt.figaspect(img))
@@ -125,6 +129,7 @@ def segment_image(img, visualize=False):
 
         visualize.display_instances(img, r['rois'], r['masks'], r['class_ids'],
                                     class_names, r['scores'], ax=ax)
+        print("Saving visualise result")
         viz_img_buff = fig2png_buffer(fig)
 
         r["resultImage"] = viz_img_buff.getvalue()
