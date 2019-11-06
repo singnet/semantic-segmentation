@@ -4,7 +4,7 @@ import requests
 
 # import the generated classes
 import services.service_spec.segmentation_pb2_grpc as grpc_bt_grpc
-import service.service_spec.segmentation_pb2 as grpc_bt_pb2
+import services.service_spec.segmentation_pb2 as grpc_bt_pb2
 
 from services import registry
 

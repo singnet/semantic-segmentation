@@ -9,7 +9,7 @@ import glob
 import json
 import argparse
 
-from service import registry
+from services import registry
 
 logging.basicConfig(level=10, format="%(asctime)s - [%(levelname)8s] - "
                                      "%(name)s - %(message)s")
