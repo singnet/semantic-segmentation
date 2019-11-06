@@ -16,6 +16,13 @@ RUN add-apt-repository -y ppa:deadsnakes/ppa && \
       apt-get install -y python3.6 python3.6-dev build-essential cmake libgtk2.0-dev python3.6-tk && \
       curl https://bootstrap.pypa.io/get-pip.py | python3.6
 
+RUN apt-get update && \
+    apt-get install -y \
+    git \
+    wget \
+    nano \
+    curl
+
 # Install snet daemon
 RUN SNETD_VERSION=`curl -s https://api.github.com/repos/singnet/snet-daemon/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")'` && \
     cd /tmp && \
