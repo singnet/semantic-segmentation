@@ -1,7 +1,6 @@
 registry = {
     'mask_rcnn_server': {
-        'grpc': 6006,
-        'jsonrpc': 6106,
+        'grpc': 7003,
         'snetd': 6406,
     },
 }
