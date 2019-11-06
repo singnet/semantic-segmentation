@@ -1,47 +1,146 @@
-import pathlib
-import subprocess
+import sys
+import os
 import signal
 import time
-import sys
+import subprocess
+import logging
+import pathlib
+import glob
+import json
 import argparse
+
+from service import registry
+
+logging.basicConfig(level=10, format="%(asctime)s - [%(levelname)8s] - "
+                                     "%(name)s - %(message)s")
+log = logging.getLogger("run_semantic_segmentation")
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="run-snet-services")
-    parser.add_argument("--daemon-config-path", help="Path to daemon configuration file", required=False)
-    args = parser.parse_args(sys.argv[1:])
+    parser = argparse.ArgumentParser(description="Run services")
+    parser.add_argument("--no-daemon",
+                        action="store_false",
+                        dest="run_daemon",
+                        help="Do not start the daemon.")
+    parser.add_argument("--ssl",
+                        action="store_true",
+                        dest="run_ssl",
+                        help="Start the daemon with SSL.")
+    parser.add_argument("--metering",
+                        action="store_true",
+                        dest="run_metering",
+                        help="Start the daemon with Metering.")
+    parser.add_argument("--update",
+                        action="store_true",
+                        dest="run_up",
+                        help="Update the daemon before run.")
+    args = parser.parse_args()
+    root_path = pathlib.Path(__file__).absolute().parent
+    
+    # All services modules go here
+    service_modules = ["services.mask_rcnn_server"]
+    
+    # Call for all the services listed in service_modules
+    all_p = start_all_services(root_path,
+                               service_modules,
+                               args.run_daemon,
+                               args.run_ssl,
+                               args.run_metering)
+    
+    # Continuous checking all subprocess
+    try:
+        while True:
+            for p in all_p:
+                p.poll()
+                if p.returncode and p.returncode != 0:
+                    kill_and_exit(all_p)
+            time.sleep(1)
+    except Exception as e:
+        log.error(e)
+        raise
 
-    def handle_signal(signum, frame):
-        snetd_p.send_signal(signum)
-        service_p.send_signal(signum)
-        snetd_p.wait()
-        service_p.wait()
-        exit(0)
 
-    signal.signal(signal.SIGTERM, handle_signal)
-    signal.signal(signal.SIGINT, handle_signal)
-
-    root_path = pathlib.Path(__file__).absolute().parent.parent
-    snetd_p = start_snetd(root_path, args.daemon_config_path)
-    service_p = start_service(root_path)
-
-    while True:
-        if snetd_p.poll() is not None:
-            snetd_p = start_snetd(root_path, args.daemon_config_path)
-        if service_p.poll() is not None:
-            service_p = start_service(root_path)
-        time.sleep(5)
+def start_all_services(cwd, service_modules, run_daemon, run_ssl, run_metering):
+    """
+    Loop through all service_modules and start them.
+    For each one, an instance of Daemon "snetd" is created.
+    snetd will start with configs from "snetd.config.json"
+    """
+    all_p = []
+    for i, service_module in enumerate(service_modules):
+        service_name = service_module.split(".")[-1]
+        log.info("Launching {} on port {}".format(str(registry[service_name]),
+                                                  service_module))
+        all_p += start_service(cwd,
+                               service_module,
+                               run_daemon,
+                               run_ssl,
+                               run_metering)
+    return all_p
 
 
-def start_snetd(cwd, daemon_config_path=None):
-    cmd = ["snetd"]
-    if daemon_config_path is not None:
-        cmd.extend(["--config", daemon_config_path])
-    return subprocess.Popen(cmd)
+def start_service(cwd, service_module, run_daemon, run_ssl, run_metering):
+    """
+    Starts SNET Daemon ("snetd") and the python module of the service
+    at the passed gRPC port.
+    """
+    
+    def add_extra_configs(conf):
+        """Add Extra keys to snetd.config.json"""
+        with open(conf, "r") as f:
+            snetd_configs = json.load(f)
+            snetd_configs["ssl_cert"] = "/opt/singnet/.certs/fullchain.pem"
+            snetd_configs["ssl_key"] = "/opt/singnet/.certs/privkey.pem"
+            snetd_configs["payent_channel_ca_path"] = "/opt/singnet/.certs/ca.pem"
+            snetd_configs["payent_channel_cert_path"] = "/opt/singnet/.certs/client.pem"
+            snetd_configs["payent_channel_key_path"] = "/opt/singnet/.certs/client-key.pem"
+            snetd_configs["payment_channel_ca_path"] = "/opt/singnet/.certs/ca.pem"
+            snetd_configs["payment_channel_cert_path"] = "/opt/singnet/.certs/client.pem"
+            snetd_configs["payment_channel_key_path"] = "/opt/singnet/.certs/client-key.pem"
+            _network = "mainnet"
+            if "ropsten" in conf:
+                _network = "ropsten"
+            snetd_configs["metering_end_point"] = "https://{}-marketplace.singularitynet.io/metering".format(_network)
+            snetd_configs["free_call_signer_address"] = "0x3Bb9b2499c283cec176e7C707Ecb495B7a961ebf"
+            snetd_configs["pvt_key_for_metering"] = os.environ.get("PVT_KEY_FOR_METERING", "")
+        with open(conf, "w") as f:
+            json.dump(snetd_configs, f, sort_keys=True, indent=4)
+    
+    all_p = []
+    if run_daemon:
+        for idx, config_file in enumerate(glob.glob("./snetd_configs/*.json")):
+            if run_ssl or run_metering:
+                add_extra_configs(config_file)
+            all_p.append(start_snetd(str(cwd), config_file))
+    service_name = service_module.split(".")[-1]
+    grpc_port = registry[service_name]["grpc"]
+    p = subprocess.Popen([
+        sys.executable,
+        "-m",
+        service_module,
+        "--grpc-port",
+        str(grpc_port)], cwd=str(cwd))
+    all_p.append(p)
+    return all_p
 
 
-def start_service(cwd):
-    return subprocess.Popen(["python3.6", "-m", "services.mask_rcnn_server"])
+def start_snetd(cwd, config_file=None):
+    """
+    Starts the Daemon "snetd":
+    """
+    cmd = ["snetd", "serve"]
+    if config_file:
+        cmd = ["snetd", "serve", "--config", config_file]
+    return subprocess.Popen(cmd, cwd=str(cwd))
+
+
+def kill_and_exit(all_p):
+    for p in all_p:
+        try:
+            os.kill(p.pid, signal.SIGTERM)
+        except Exception as e:
+            log.error(e)
+    exit(1)
 
 
 if __name__ == "__main__":
