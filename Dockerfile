@@ -31,8 +31,12 @@ RUN SNETD_VERSION=`curl -s https://api.github.com/repos/singnet/snet-daemon/rele
     mv snet-daemon-${SNETD_VERSION}-linux-amd64/snetd /usr/bin/snetd
 
 RUN cd ${SINGNET_DIR} && \
-    git submodule update --init -- mask_rcnn && \
     git clone -b ${git_branch} https://github.com/${git_owner}/${git_repo}.git
+
+RUN cd ${SINGNET_DIR}/${SERVICE_NAME} && \
+    git submodule update --init -- mask_rcnn && \
+    cd mask_rcnn && \
+    pip3.6 install -r requirements.txt
 
 RUN cd ${SINGNET_DIR}/${SERVICE_NAME} && \
     pip3.6 install -r requirements.txt && \
