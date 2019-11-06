@@ -182,7 +182,7 @@ jobs:
       CERTS_DIR: singnet/.certs
       SERVICE_RUN_COMMAND: bash -c "git pull;python3.6 run_service.py --ssl"
       SERVICE_TEST_COMMAND: bash -c "sleep 10;python3.6 test_service.py auto"
-      SNETD_PORT_MAINNET: 6206
+      SNETD_PORT_MAINNET: 6406
       SNETD_PORT_ROPSTEN: 6306
     steps:
       - checkout
