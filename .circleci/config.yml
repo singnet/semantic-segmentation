@@ -16,7 +16,7 @@ jobs:
           testnet-port: "6306"
           run-command: "python3.6 run_service.py --ssl --metering"
           docker-test-files: "Dockerfile, requirements.txt"
-          docker-file-path: "cntk-language-understanding/Dockerfile"
+          docker-file-path: "Dockerfile"
           docker-no-cache: true
           docker-image: "semantic_segmentation"
           docker-container: "SEMANTIC_SEGMENTATION"
