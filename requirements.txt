@@ -1,4 +1,4 @@
-pyyaml==4.2b4
+pyyaml==5.4
 tqdm==4.28.1
 grpcio==1.16.0
 grpcio-tools==1.14.1
