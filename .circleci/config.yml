@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  ssh-deployment: singularitynet/ssh-deployment@2.2.0
+  ssh-deployment: singularitynet/ssh-deployment@2.4.1
 
 jobs:
   semantic-segmentation:
@@ -12,9 +12,9 @@ jobs:
       - ssh-deployment/deploy:
           ssh-host: ${SSH_HOST}
           ssh-user: ${SSH_USER}
-          mainnet-port: "6406"
+          mainnet-port: "7008"
           testnet-port: "6306"
-          run-command: "python3.6 run_service.py --ssl --metering"
+          run-command: "python3.6 run_service.py --ssl"
           docker-test-files: "Dockerfile, requirements.txt"
           docker-file-path: "Dockerfile"
           docker-no-cache: true

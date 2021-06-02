@@ -1,7 +1,7 @@
 pyyaml==4.2b4
 tqdm==4.28.1
-grpcio==1.16.0
-grpcio-tools==1.14.1
+grpcio==1.27.2
+grpcio-tools==1.27.2
 # mask_rcnn
 numpy==1.16.0
 scipy==1.2.0
