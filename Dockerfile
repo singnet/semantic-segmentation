@@ -37,14 +37,14 @@ RUN cd ${SINGNET_DIR} && \
     git clone -b ${git_branch} https://github.com/${git_owner}/${git_repo}.git
 
 RUN cd ${SINGNET_DIR}/${SERVICE_NAME} && \
-    git submodule update --init -- mask_rcnn && \
-    cd mask_rcnn && \
     pip3.6 install -U pip==20.3.4 && \
-    pip3.6 install -r requirements.txt
-
-RUN cd ${SINGNET_DIR}/${SERVICE_NAME} && \
     pip3.6 install -r requirements.txt && \
     sh buildproto.sh && \
     python3.6 fetch_models.py /caches/models
+
+RUN cd ${SINGNET_DIR}/${SERVICE_NAME} && \
+    git submodule update --init -- mask_rcnn && \
+    cd mask_rcnn && \
+    pip3.6 install -r requirements.txt
 
 WORKDIR ${SINGNET_DIR}/${SERVICE_NAME}
