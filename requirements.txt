@@ -5,7 +5,7 @@ grpcio-tools==1.27.2
 # mask_rcnn
 numpy==1.16.0
 scipy==1.2.0
-Pillow==6.2.0
+Pillow==8.1.1
 cython==0.29
 matplotlib==3.0.2
 scikit-image==0.14.2
