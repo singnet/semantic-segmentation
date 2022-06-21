@@ -3,7 +3,7 @@ tqdm==4.28.1
 grpcio==1.27.2
 grpcio-tools==1.27.2
 # mask_rcnn
-numpy==1.16.0
+numpy==1.22.0
 scipy==1.2.0
 Pillow==6.2.0
 cython==0.29
